@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>عداد الأيام</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+
+    .box {
+      background: white;
+      padding: 25px;
+      border-radius: 14px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      width: 320px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+      text-align: right;
+      font-weight: bold;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 20px;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      background: #007bff;
+      color: white;
+      font-size: 17px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+    .result {
+      margin-top: 20px;
+      font-size: 22px;
+      font-weight: bold;
+      color: #222;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="box">
+    <h1>عداد الأيام</h1>
+
+    <label for="startDate">تاريخ البداية</label>
+    <input type="date" id="startDate">
+
+    <label for="endDate">تاريخ النهاية</label>
+    <input type="date" id="endDate">
+
+    <button onclick="calculateDays()">احسب الأيام</button>
+
+    <div class="result" id="result"></div>
+  </div>
+
+  <script>
+    function calculateDays() {
+      const start = document.getElementById("startDate").value;
+      const end = document.getElementById("endDate").value;
+      const result = document.getElementById("result");
+
+      if (!start || !end) {
+        result.textContent = "اختر تاريخ البداية والنهاية";
+        return;
+      }
+
+      const startDate = new Date(start);
+      const endDate = new Date(end);
+
+      if (endDate < startDate) {
+        result.textContent = "تاريخ النهاية لازم يكون بعد البداية";
+        return;
+      }
+
+      const diffTime = endDate - startDate;
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+      result.textContent = "عدد الأيام: " + diffDays + " يوم";
+    }
+  </script>
+
+</body>
+</html>
