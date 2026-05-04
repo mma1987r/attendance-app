@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>سجل الاستئذان</title>
+
+<style>
+body{
+  font-family:Arial;
+  min-height:100vh;
+  background:#f5f7fa;
+  padding:18px;
+  margin:0;
+}
+.card{
+  background:#fff;
+  padding:22px;
+  border-radius:20px;
+  max-width:420px;
+  margin:auto;
+  text-align:center;
+  box-shadow:0 6px 20px #0001;
+}
+h2,h3{color:#1e3a8a}
+select,input,button{
+  font-size:18px;
+  border-radius:12px;
+  border:1px solid #ddd;
+}
+.main-input{
+  width:100%;
+  padding:12px;
+  margin:6px 0;
+}
+.time-title{
+  text-align:right;
+  font-weight:bold;
+  color:#1e3a8a;
+  margin-top:10px;
+}
+.time-row{
+  display:flex;
+  gap:6px;
+  margin:6px 0;
+}
+.time-row select{
+  flex:1;
+  padding:10px;
+}
+.add-btn{
+  width:100%;
+  padding:12px;
+  margin-top:10px;
+  border-radius:20px;
+  background:#dc2626;
+  color:#fff;
+  border:0;
+}
+.small-btn{
+  margin-top:8px;
+  padding:8px 14px;
+  border:0;
+}
+.reset-btn{
+  background:#1e3a8a;
+  color:white;
+}
+.record{
+  background:#f9fafb;
+  margin:8px 0;
+  padding:10px;
+  border-radius:12px;
+  text-align:right;
+  border-right:4px solid #dc2626;
+}
+#msg{color:#dc2626;margin:10px}
+#lastResult{font-size:26px;margin-top:12px;color:#1e3a8a}
+</style>
+</head>
+
+<body>
+<div class="card">
+
+<h2>سجل الاستئذان</h2>
+
+<select id="type" class="main-input">
+  <option value="in">دخول متأخر</option>
+  <option value="out">خروج مبكر</option>
+</select>
+
+<input type="date" id="date" class="main-input">
+
+<div class="time-title">وقت الاستئذان</div>
+<div class="time-row">
+  <select id="t1h"></select>
+  <select id="t1m"></select>
+  <select id="t1p">
+    <option value="AM">AM</option>
+    <option value="PM">PM</option>
+  </select>
+</div>
+
+<div class="time-title">وقت الدوام الرسمي</div>
+<div class="time-row">
+  <select id="t2h"></select>
+  <select id="t2m"></select>
+  <select id="t2p">
+    <option value="AM">AM</option>
+    <option value="PM">PM</option>
+  </select>
+</div>
+
+<button class="add-btn" onclick="add()">احسب و أضف</button>
+
+<div id="lastResult">--:--</div>
+
+<hr>
+
+<div>المستخدم: <b id="used">00:00</b></div>
+<div>المتبقي: <b id="left">12:00</b></div>
+<div>العدد: <b id="count">0 / 4</b></div>
+
+<div id="msg"></div>
+
+<h3>السجل</h3>
+<div id="list"></div>
+
+<button class="small-btn" onclick="undo()">حذف آخر</button>
+<button class="small-btn reset-btn" onclick="resetAll()">تصفير</button>
+
+</div>
+
+<script>
+const TOTAL = 12 * 60;
+const MAX = 4;
+let data = JSON.parse(localStorage.getItem("data") || "[]");
+
+document.getElementById("date").value = new Date().toISOString().split("T")[0];
+
+function fillSelects(){
+  ["t1h","t2h"].forEach(id=>{
+    const el = document.getElementById(id);
+    el.innerHTML = "";
+
+    let first = document.createElement("option");
+    first.textContent = "ساعة";
+    first.value = "";
+    first.disabled = true;
+    first.selected = true;
+    el.appendChild(first);
+
+    for(let i=1;i<=12;i++){
+      let o = document.createElement("option");
+      o.value = i;
+      o.textContent = i;
+      el.appendChild(o);
+    }
+  });
+
+  ["t1m","t2m"].forEach(id=>{
+    const el = document.getElementById(id);
+    el.innerHTML = "";
+
+    let first = document.createElement("option");
+    first.textContent = "دقيقة";
+    first.value = "";
+    first.disabled = true;
+    first.selected = true;
+    el.appendChild(first);
+
+    for(let i=0;i<60;i++){
+      let o = document.createElement("option");
+      o.value = i;
+      o.textContent = String(i).padStart(2,"0");
+      el.appendChild(o);
+    }
+  });
+}
+
+function getTime(h,m,p){
+  h = +h; m = +m;
+  if(!h || isNaN(m)) return null;
+
+  if(p==="PM" && h!==12) h+=12;
+  if(p==="AM" && h===12) h=0;
+
+  return h*60 + m;
+}
+
+function fmt(x){
+  let h=Math.floor(x/60);
+  let m=x%60;
+  return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");
+}
+
+function displayTime(h,m,p){
+  return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")} ${p}`;
+}
+
+function calc(type,a,b){
+  return type==="in" ? (a-b+1440)%1440 : (b-a+1440)%1440;
+}
+
+function add(){
+  const type = typeEl.value;
+  const date = dateEl.value;
+
+  const h1=t1h.value,m1=t1m.value,p1=t1p.value;
+  const h2=t2h.value,m2=t2m.value,p2=t2p.value;
+
+  const a=getTime(h1,m1,p1);
+  const b=getTime(h2,m2,p2);
+
+  msg.innerText="";
+
+  if(a===null||b===null){
+    msg.innerText="اختر الساعة والدقيقة";
+    return;
+  }
+
+  if(data.length>=MAX){
+    msg.innerText="وصلت الحد 4";
+    return;
+  }
+
+  const r=calc(type,a,b);
+  const usedNow=data.reduce((s,x)=>s+x.duration,0);
+
+  if(usedNow+r>TOTAL){
+    msg.innerText="يتجاوز 12 ساعة";
+    return;
+  }
+
+  data.push({
+    duration:r,
+    type:type==="in"?"دخول متأخر":"خروج مبكر",
+    date,
+    t1:displayTime(h1,m1,p1),
+    t2:displayTime(h2,m2,p2)
+  });
+
+  localStorage.setItem("data",JSON.stringify(data));
+
+  lastResult.innerText=fmt(r);
+
+  t1h.value=""; t1m.value="";
+  t2h.value=""; t2m.value="";
+
+  render();
+}
+
+function undo(){data.pop();localStorage.setItem("data",JSON.stringify(data));render();}
+function resetAll(){
+  if(confirm("تصفير السجل؟")){
+    data=[];localStorage.setItem("data","[]");
+    lastResult.innerText="--:--";render();
+  }
+}
+
+function render(){
+  const used=data.reduce((s,x)=>s+x.duration,0);
+  usedEl.innerText=fmt(used);
+  leftEl.innerText=fmt(TOTAL-used);
+  countEl.innerText=data.length+" / "+MAX;
+
+  list.innerHTML=data.map((x,i)=>`
+    <div class="record">
+      ${i+1}) <b>${x.type}</b><br>
+      التاريخ: ${x.date}<br>
+      وقت الاستئذان: ${x.t1}<br>
+      وقت الدوام الرسمي: ${x.t2}<br>
+      المدة: <b>${fmt(x.duration)}</b>
+    </div>
+  `).join("");
+}
+
+const typeEl=type,dateEl=date,usedEl=used,leftEl=left,countEl=count;
+
+fillSelects();
+render();
+</script>
+</body>
+</html>
