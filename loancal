@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>حاسبة القروض</title>
+
+<style>
+/* ===== CSS ===== */
+body{
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+  max-width:720px;
+  margin:18px auto;
+  padding:0 14px;
+  line-height:1.6
+}
+
+h2{margin:10px 0 6px}
+
+.card{
+  border:1px solid #ddd;
+  border-radius:14px;
+  padding:14px;
+  margin:14px 0
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:10px
+}
+
+@media (min-width:680px){
+  .grid{grid-template-columns:1fr 1fr 1fr}
+}
+
+label{
+  display:block;
+  margin:0 0 6px;
+  font-weight:600
+}
+
+input{
+  width:100%;
+  padding:12px;
+  border:1px solid #ccc;
+  border-radius:12px;
+  font-size:16px
+}
+
+.row{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:10px
+}
+
+button{
+  padding:12px 14px;
+  border:0;
+  border-radius:12px;
+  font-size:16px;
+  cursor:pointer
+}
+
+.out{
+  margin-top:12px;
+  padding-top:10px;
+  border-top:1px dashed #ddd
+}
+
+.kpi{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:8px
+}
+
+@media (min-width:680px){
+  .kpi{grid-template-columns:1fr 1fr 1fr}
+}
+
+.box{
+  border:1px solid #eee;
+  border-radius:12px;
+  padding:10px
+}
+
+.muted{color:#666}
+.warn{color:#a40000}
+.small{font-size:13px}
+</style>
+</head>
+
+<body>
+
+<h2>حاسبة القروض – د.ك</h2>
+
+<div class="card">
+
+  <h3>حسب القرض</h3>
+
+  <div class="grid">
+    <div>
+      <label>مبلغ القرض (د.ك)</label>
+      <input id="c1_P" type="number" step="0.001">
+    </div>
+
+    <div>
+      <label>نسبة الفايدة %</label>
+      <input id="c1_APR" type="number" step="0.001">
+    </div>
+
+    <div>
+      <label>عدد السنوات</label>
+      <input id="c1_Y" type="number" step="1">
+    </div>
+  </div>
+
+  <div class="row">
+    <button onclick="calcForward()">احسب</button>
+    <button onclick="clearCalc('c1_')">مسح</button>
+  </div>
+
+  <div id="c1_out" class="out"></div>
+</div>
+
+<div class="card">
+
+  <h3>حسب القسط</h3>
+
+  <div class="grid">
+    <div>
+      <label>القسط (د.ك)</label>
+      <input id="c2_M" type="number" step="0.001">
+    </div>
+
+    <div>
+      <label>نسبة الفايدة %</label>
+      <input id="c2_APR" type="number" step="0.001">
+    </div>
+
+    <div>
+      <label>عدد السنوات</label>
+      <input id="c2_Y" type="number" step="1">
+    </div>
+  </div>
+
+  <div class="row">
+    <button onclick="calcReverse()">احسب</button>
+    <button onclick="clearCalc('c2_')">مسح</button>
+  </div>
+
+  <div id="c2_out" class="out"></div>
+</div>
+
+<script>
+/* ===== JS ===== */
+
+function fmtKWD(x){
+  if(!isFinite(x)) return "—";
+  return x.toLocaleString('ar-KW',{
+    minimumFractionDigits:3,
+    maximumFractionDigits:3
+  }) + " د.ك";
+}
+
+function loanPayment(P, APR, N){
+  if(APR === 0) return P / N;
+  const r = (APR/100)/12;
+  const pow = Math.pow(1+r, N);
+  return P * r * pow / (pow - 1);
+}
+
+function loanPrincipal(M, APR, N){
+  if(APR === 0) return M * N;
+  const r = (APR/100)/12;
+  const pow = Math.pow(1+r, N);
+  return M * (pow - 1) / (r * pow);
+}
+
+function renderKPIs(id,a,b,c,labels){
+  document.getElementById(id).innerHTML = `
+    <div class="kpi">
+      <div class="box"><div class="muted">${labels[0]}</div><b>${a}</b></div>
+      <div class="box"><div class="muted">${labels[1]}</div><b>${b}</b></div>
+      <div class="box"><div class="muted">${labels[2]}</div><b>${c}</b></div>
+    </div>
+  `;
+}
+
+function calcForward(){
+  const P = Number(c1_P.value);
+  const APR = Number(c1_APR.value);
+  const Y = Number(c1_Y.value);
+  const N = Y*12;
+
+  if(!(P>0 && Y>0 && APR>=0)){
+    c1_out.innerHTML = '<div class="warn">أدخل قيم صحيحة</div>';
+    return;
+  }
+
+  const M = loanPayment(P,APR,N);
+  const total = M*N;
+  const interest = total-P;
+
+  renderKPIs("c1_out",fmtKWD(M),fmtKWD(interest),fmtKWD(total),
+  ["القسط","الفايدة","الإجمالي"]);
+}
+
+function calcReverse(){
+  const M = Number(c2_M.value);
+  const APR = Number(c2_APR.value);
+  const Y = Number(c2_Y.value);
+  const N = Y*12;
+
+  if(!(M>0 && Y>0 && APR>=0)){
+    c2_out.innerHTML = '<div class="warn">أدخل قيم صحيحة</div>';
+    return;
+  }
+
+  const P = loanPrincipal(M,APR,N);
+  const total = M*N;
+  const interest = total-P;
+
+  renderKPIs("c2_out",fmtKWD(P),fmtKWD(interest),fmtKWD(total),
+  ["مبلغ القرض","الفايدة","الإجمالي"]);
+}
+
+function clearCalc(p){
+  ["P","APR","Y"].forEach(x=>{
+    const el = document.getElementById(p+x);
+    if(el) el.value="";
+  });
+  document.getElementById(p+"out").innerHTML="تم المسح";
+}
+</script>
+
+</body>
+</html>
